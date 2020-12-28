@@ -52,9 +52,10 @@ testloader = torch.utils.data.DataLoader(testset, batch_size=args.batch_size,
 net = RetinaNet()
 # net.load_state_dict(torch.load('./model/net.pth'))
 
+args.resume = 1
 if args.resume:
     print('==> Resuming from checkpoint..')
-    checkpoint = torch.load('./checkpoint/ckpt.pth')
+    checkpoint = torch.load('./checkpoint/ckpt_interrupted.pth')
     net.load_state_dict(checkpoint['net'])
     best_loss = checkpoint['loss']
     start_epoch = checkpoint['epoch']

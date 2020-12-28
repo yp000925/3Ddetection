@@ -19,12 +19,14 @@ class RetinaNet(nn.Module):
         loc_preds = []
         cls_preds = []
         for fm in fms:
+            print('shape %s' % (str(fm.shape)))
             loc_pred = self.loc_head(fm)
             cls_pred = self.cls_head(fm)
+            # print('shape %s' % (str(loc_pred.shape)))
             loc_pred = loc_pred.permute(0, 2, 3, 1).contiguous().view(x.size(0), -1,
                                                                       4)  # [N, 9*4,H,W] -> [N,H,W, 9*4] -> [N,H*W*9, 4]
             cls_pred = cls_pred.permute(0, 2, 3, 1).contiguous().view(x.size(0), -1,
-                                                                      self.num_classes)  # [N,9*20,H,W] -> [N,H,W,9*20] -> [N,H*W*9,20]
+                                                                      self.num_classes)  # [N,9*256,H,W] -> [N,H,W,9*256] -> [N,H*W*9,256]
             loc_preds.append(loc_pred)
             cls_preds.append(cls_pred)
         return torch.cat(loc_preds, 1), torch.cat(cls_preds, 1)
@@ -33,7 +35,8 @@ class RetinaNet(nn.Module):
         layers = []
         for _ in range(4):
             layers.append(nn.Conv2d(256, 256, kernel_size=3, stride=1, padding=1))
-            layers.append(nn.ReLU(True))
+            # layers.append(nn.ReLU(True))
+            layers.append(nn.LeakyReLU())
         layers.append(nn.Conv2d(256, out_planes, kernel_size=3, stride=1, padding=1))
         return nn.Sequential(*layers)
 
@@ -57,10 +60,10 @@ class RetinaNet(nn.Module):
 # test()
 if __name__ == "__main__":
     net = RetinaNet()
-    loc_preds, cls_preds = net(Variable(torch.randn(2, 3, 256, 256)))
-    print(loc_preds.size())
-    print(cls_preds.size())
-    loc_grads = Variable(torch.randn(loc_preds.size()))
-    cls_grads = Variable(torch.randn(cls_preds.size()))
-    loc_preds.backward(loc_grads,retain_graph=True)
-    cls_preds.backward(cls_grads)
+    loc_preds, cls_preds = net(Variable(torch.randn(2, 3, 1024, 1024)))
+    # print(loc_preds.size())
+    # print(cls_preds.size())
+    # loc_grads = Variable(torch.randn(loc_preds.size()))
+    # cls_grads = Variable(torch.randn(cls_preds.size()))
+    # loc_preds.backward(loc_grads,retain_graph=True)
+    # cls_preds.backward(cls_grads)

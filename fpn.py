@@ -60,7 +60,7 @@ class FPN(nn.Module):
         self.toplayer2 = nn.Conv2d(256, 256, kernel_size=3, stride=1, padding=1)
 
     def _make_layer(self, block, planes, num_blocks, stride):
-        strides = [stride] + [1]*(num_blocks-1)
+        strides = [stride] + [1]*(num_blocks-1) #the fm size will be shrinked as half after the first bottleneck
         layers = []
         for stride in strides:
             layers.append(block(self.in_planes, planes, stride))
@@ -101,6 +101,13 @@ class FPN(nn.Module):
         c5 = self.layer4(c4)
         p6 = self.conv6(c5)
         p7 = self.conv7(F.relu(p6))
+        # print(c1.shape)
+        # print(c2.shape)
+        # print(c3.shape)
+        # print(c4.shape)
+        # print(c5.shape)
+        # print(p6.shape)
+        # print(p7.shape)
         # Top-down
         p5 = self.latlayer1(c5)
         p4 = self._upsample_add(p5, self.latlayer2(c4))
@@ -119,7 +126,7 @@ def FPN101():
 
 def test():
     net = FPN50()
-    fms = net(Variable(torch.randn(1,3,600,300)))
+    fms = net(Variable(torch.randn(1,3,1024,1024)))
     for fm in fms:
         print(fm.size())
 

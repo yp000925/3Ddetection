@@ -8,8 +8,9 @@ from utils import meshgrid, box_iou, box_nms, change_box_order
 class DataEncoder:
     def __init__(self):
         self.anchor_areas = [32*32., 64*64., 128*128., 256*256., 512*512.]  # p3 -> p7
+        # self.anchor_areas = [8 * 8., 16 * 16., 32 * 32., 64 * 64., 128 * 128.]
         self.aspect_ratios = [1/2., 1/1., 2/1.]
-        self.scale_ratios = [1., pow(2,1/3.), pow(2,2/3.)]
+        self.scale_ratios = [1., pow(2, 1/3.), pow(2, 2/3.)]
         self.anchor_wh = self._get_anchor_wh()
 
     def _get_anchor_wh(self):
@@ -41,8 +42,7 @@ class DataEncoder:
                         where #anchors = fmw * fmh * #anchors_per_cell
         '''
         num_fms = len(self.anchor_areas)
-        fm_sizes = [(input_size/pow(2.,i+3)).ceil() for i in range(num_fms)]  # p3 -> p7 feature map sizes
-
+        fm_sizes = [(input_size/pow(2., i+3)).ceil() for i in range(num_fms)]  # p3 -> p7 feature map sizes
         boxes = []
         for i in range(num_fms):
             fm_size = fm_sizes[i]
@@ -78,16 +78,20 @@ class DataEncoder:
         anchor_boxes = self._get_anchor_boxes(input_size)
         boxes = change_box_order(boxes, 'xyxy2xywh')
 
-        ious = box_iou(anchor_boxes, boxes, order='xywh')
-        max_ious, max_ids = ious.max(1)
-        boxes = boxes[max_ids]
+        ious = box_iou(anchor_boxes, boxes, order='xywh') #tensor shape [#anchor_boxes,#boxes]
+        max_ious, max_ids = ious.max(1) # max_ious.shape =#anchor_boxes max_ids.shape=#anchor_boxes
+        boxes = boxes[max_ids] # according to the sequence of anchor_boxes,
+        # resort and assign each corresponding matched boxes to proposed andchors
+        # now the boxes.shape = [#anchor_boxes, 4]
 
         loc_xy = (boxes[:,:2]-anchor_boxes[:,:2]) / anchor_boxes[:,2:]
         loc_wh = torch.log(boxes[:,2:]/anchor_boxes[:,2:])
-        loc_targets = torch.cat([loc_xy,loc_wh], 1)
+        loc_targets = torch.cat([loc_xy,loc_wh], 1)  #loc_targets.shape = [#anchor_boxes, 4]
         cls_targets = 1 + labels[max_ids]
+        # now cls_targets.shape = [#anchor_boxes,]
+        # but the labels value stored are changed by adding 1
 
-        cls_targets[max_ious<0.5] = 0
+        cls_targets[max_ious<0.5] = 0 # background=0 overlapped=-1 foreground/target=original_labels+1
         ignore = (max_ious>0.4) & (max_ious<0.5)  # ignore ious between [0.4,0.5]
         cls_targets[ignore] = -1  # for now just mark ignored to -1
         return loc_targets, cls_targets

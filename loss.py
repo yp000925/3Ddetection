@@ -51,8 +51,10 @@ class FocalLoss(nn.Module):
 
         t = one_hot_embedding(y.data.cpu(), 1+self.num_classes)
         t = t[:,1:]
-        # t = Variable(t).cuda()
-        t = Variable(t)
+        if torch.cuda.is_available():
+            t = Variable(t).cuda()
+        else:
+            t = Variable(t)
 
         xt = x*(2*t-1)  # xt = x if t > 0 else -x
         pt = (2*xt+1).sigmoid()
@@ -62,7 +64,8 @@ class FocalLoss(nn.Module):
         return loss.sum()
 
     def forward(self, loc_preds, loc_targets, cls_preds, cls_targets):
-        '''Compute loss between (loc_preds, loc_targets) and (cls_preds, cls_targets).
+        '''
+        Compute loss between (loc_preds, loc_targets) and (cls_preds, cls_targets).
 
         Args:
           loc_preds: (tensor) predicted locations, sized [batch_size, #anchors, 4].
@@ -75,7 +78,7 @@ class FocalLoss(nn.Module):
         '''
         batch_size, num_boxes = cls_targets.size()
         pos = cls_targets > 0  # [N,#anchors]
-        num_pos = pos.data.long().sum()
+        num_pos = pos.data.long().sum() # calculate all the value larger than 0
 
         ################################################################
         # loc_loss = SmoothL1Loss(pos_loc_preds, pos_loc_targets)
@@ -88,11 +91,25 @@ class FocalLoss(nn.Module):
         ################################################################
         # cls_loss = FocalLoss(loc_preds, loc_targets)
         ################################################################
-        pos_neg = cls_targets > -1  # exclude ignored anchors
+
+        pos_neg = cls_targets > -1  # only exclude ignored anchors
+        num_peg = pos_neg.data.long().sum()
+        print('background+obj anchors : %d/ %d'%(num_peg,num_boxes))
+
+
         mask = pos_neg.unsqueeze(2).expand_as(cls_preds)
         masked_cls_preds = cls_preds[mask].view(-1,self.num_classes)
         cls_loss = self.focal_loss_alt(masked_cls_preds, cls_targets[pos_neg])
+        # num_pos = max(1.0, num_pos.item())
+        print('obj anchors : %d/ %d'% (num_pos,num_boxes))
 
-        print('loc_loss: %.3f | cls_loss: %.3f' % (loc_loss.data.item()/num_pos, cls_loss.data.item()/num_pos), end=' | ')
-        loss = (loc_loss+cls_loss)/num_pos
+
+        overlapped_anchors = cls_targets == -1
+        overlapped_anchors_number =overlapped_anchors.data.long().sum()
+        print('obj anchors : %d / %d'% (overlapped_anchors_number,num_boxes))
+
+        # print('loc_loss: %.3f | cls_loss: %.3f' % (loc_loss.data.item()/num_pos, cls_loss.data.item()/num_pos), end=' | ')
+        print('loc_loss: %.3f | cls_loss: %.3f' % (loc_loss.data.item()/num_pos,cls_loss.data.item()/num_peg), end=' | ')
+        loss = loc_loss/num_pos + cls_loss/num_peg
+        # loss = (loc_loss+cls_loss)/num_pos
         return loss
