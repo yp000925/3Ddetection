@@ -19,9 +19,9 @@ import lbtoolbox as lb
 from signal import SIGINT, SIGTERM
 
 parser = argparse.ArgumentParser(description='PyTorch RetinaNet Training')
-parser.add_argument('--lr', default=1e-3, type=float, help='learning rate')
+parser.add_argument('--lr', default=0.0005, type=float, help='learning rate')
 parser.add_argument('--resume', '-r', action='store_true', help='resume from checkpoint')
-parser.add_argument('--batch_size', default=1, type=int, help='the training batch size')
+parser.add_argument('--batch_size', default=2, type=int, help='the training batch size')
 args = parser.parse_args()
 
 
@@ -52,7 +52,7 @@ testloader = torch.utils.data.DataLoader(testset, batch_size=args.batch_size,
 net = RetinaNet()
 # net.load_state_dict(torch.load('./model/net.pth'))
 
-args.resume = 1
+# args.resume = 1
 if args.resume:
     print('==> Resuming from checkpoint..')
     checkpoint = torch.load('./checkpoint/ckpt_interrupted.pth')
@@ -70,6 +70,7 @@ optimizer = optim.Adam(net.parameters(),lr=args.lr)
 # Training
 def train(epoch):
     print('\nEpoch: %d' % epoch)
+    print('==================================================================')
     net.train()
     iter_p_epoch = int(len(trainloader)/ args.batch_size)
     # net.module.freeze_bn()
@@ -101,6 +102,7 @@ def train(epoch):
             time_pass = (batch_idx+1)*time_elp
             print('train_loss: %.3f | avg_loss: %.3f' % (loss.data.item(), train_loss/(batch_idx+1)))
             print('Time : %s / %s' % (format_time(time_pass), format_time(total_time)))
+            print('\n')
 
             if u.interrupted:
                 print("Interrupted on request!")
@@ -120,7 +122,7 @@ def train(epoch):
 
 # Test
 def test(epoch):
-    print('\nTest')
+    print('\nTest==================================================================')
     net.eval()
     test_loss = 0
     for batch_idx, (inputs, loc_targets, cls_targets) in enumerate(testloader):
@@ -187,4 +189,4 @@ def visualization():
 for epoch in range(start_epoch, start_epoch+15):
     # visualization()
     train(epoch)
-    test(epoch)
+    # test(epoch)

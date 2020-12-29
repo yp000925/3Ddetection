@@ -19,7 +19,7 @@ class RetinaNet(nn.Module):
         loc_preds = []
         cls_preds = []
         for fm in fms:
-            print('shape %s' % (str(fm.shape)))
+            # print('shape %s' % (str(fm.shape)))
             loc_pred = self.loc_head(fm)
             cls_pred = self.cls_head(fm)
             # print('shape %s' % (str(loc_pred.shape)))
@@ -31,13 +31,15 @@ class RetinaNet(nn.Module):
             cls_preds.append(cls_pred)
         return torch.cat(loc_preds, 1), torch.cat(cls_preds, 1)
 
-    def _make_head(self, out_planes):
+    def _make_head(self, out_planes, type ='loc'):
         layers = []
         for _ in range(4):
             layers.append(nn.Conv2d(256, 256, kernel_size=3, stride=1, padding=1))
             # layers.append(nn.ReLU(True))
             layers.append(nn.LeakyReLU())
         layers.append(nn.Conv2d(256, out_planes, kernel_size=3, stride=1, padding=1))
+        # if type == 'cls':
+        #     layers.append(nn.Sigmoid())
         return nn.Sequential(*layers)
 
     def freeze_bn(self):
