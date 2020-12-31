@@ -1,3 +1,3 @@
 #!/bin/bash
-python train.py --lr 0.001 --batch_size 1
+python train.py --lr 0.0005 --batch_size 16 --n_epochs 16
 
