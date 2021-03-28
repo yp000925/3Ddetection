@@ -1,3 +1,8 @@
+'''
+add validation process, considering the process time, only 50 iter(100 images with 2 batch-size) are used
+
+'''
+
 import os
 import argparse
 import torch
@@ -99,48 +104,6 @@ scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=3, verbose=
 train_losses = []
 valid_losses = []
 
-
-
-def train():
-
-    for iter,data in enumerate(trainloader):
-        num_p_epoch = int(len(trainloader) / args.batch_size)
-        try:
-            t1 = time.time()
-            optimizer.zero_grad()
-            if torch.cuda.is_available():
-                classification_loss,regression_loss = net([data['img'].cuda().float(), data['anno'].cuda()])
-            else:
-                classification_loss,regression_loss = net([data['img'].float(), data['anno']])
-
-            classification_loss = classification_loss.mean()
-            regression_loss = regression_loss.mean()
-
-            loss = classification_loss+regression_loss
-
-            if bool(loss==0):
-                continue
-            loss.backward()
-            torch.nn.utils.clip_grad_norm_(net.parameters(), 0.1)
-            optimizer.step()
-            train_losses.append(float(loss))
-            t2 = time.time()
-            time_delta = t2 - t1
-            total_time = time_delta * len(trainloader)
-            time_passed = (iter + 1) * time_delta
-            print('\rIteration: {}/{} | Classification loss: {:1.5f} | '
-                  'Regression loss: {:1.5f} | Running loss: {:1.5f}     Time : %s / %s in in epoch'.format(
-                    iter, num_p_epoch, float(classification_loss), float(regression_loss), np.mean(train_losses),
-                format_time(time_passed),format_time(total_time)), end='',flush=True)
-
-            writer.add_scalar('iteration_train_loss', float(loss), iter + epoch * len(trainloader))
-
-        except Exception as e:
-            print(e)
-            continue
-
-
-
 # Training
 def train(epoch):
     global train_losses
@@ -161,7 +124,7 @@ def train(epoch):
                 optimizer.zero_grad()
 
                 if torch.cuda.is_available():
-                    classification_loss, regression_loss = net([data['img'].cuda().float(), data['annot'].cuda()])
+                    classification_loss, regression_loss = net([data['img'].cuda().float(), data['annot']])
                 else:
                     classification_loss, regression_loss = net([data['img'].float(), data['annot']])
 
@@ -218,25 +181,26 @@ def train(epoch):
 
 
 # Test
-# def test(epoch):
-#     global valid_losses
-#     print('\nTest==================================================================')
-#     net.train()
-#     test_loss = 0
-#     with torch.no_grad():
-#         for iter_num, data in enumerate(testloader):
-#             print('Batch: %3d/%3d' % (iter_num, int(len(testloader)/args.batch_size)))
-#             if torch.cuda.is_available():
-#                 classification_loss, regression_loss = net([data['img'].cuda().float(), data['annot']])
-#             else:
-#                 classification_loss, regression_loss = net([data['img'].float(), data['annot']])
-#
-#             classification_loss = classification_loss.mean()
-#             regression_loss = regression_loss.mean()
-#             loss = classification_loss + regression_loss
-#             test_loss += loss
-#             break
-#     valid_losses.append(test_loss/len(testloader))
+def valid(epoch):
+    global valid_losses
+    print('\nValidation==================================================================')
+    net.train()
+    valid_loss = 0
+    with torch.no_grad():
+        for iter_num, data in enumerate(testloader):
+            print('Batch: %3d/%3d' % (iter_num, 50))
+            if torch.cuda.is_available():
+                classification_loss, regression_loss = net([data['img'].cuda().float(), data['annot']])
+            else:
+                classification_loss, regression_loss = net([data['img'].float(), data['annot']])
+
+            classification_loss = classification_loss.mean()
+            regression_loss = regression_loss.mean()
+            loss = classification_loss + regression_loss
+            valid_loss += loss
+            if iter_num == 49:
+                break
+    valid_losses.append(valid_loss/(iter_num+1))
 
 def test(epoch):
     print('Evaluating dataset')
@@ -247,50 +211,24 @@ avg_train_losses = []
 avg_valid_losses = []
 early_stopping = EarlyStopping(patience=3, verbose=True)
 
-# for epoch in range(start_epoch,start_epoch+args.n_epochs):
-#     # train(epoch)
-#     test(epoch)
-#     train_loss = np.average(train_losses)
-#     # valid_loss = np.average(valid_losses)
-#     avg_train_losses.append(train_loss)
-#     # avg_valid_losses.append(valid_loss)
-#     # epoch_len = len(str(args.n_epochs))
-#     print_msg = (f'[{epoch:>{epoch_len}}/{args.n_epochs:>{epoch_len}}] ' +
-#              f'train_loss: {train_loss:.5f} ' +
-#              f'valid_loss: {valid_loss:.5f}')
-#     # print(print_msg)
-#     writer.add_scalar('train_loss_per_epoch', train_loss, epoch)
-#     # writer.add_scalar('val_loss_per_epoch', valid_loss, epoch)
-#     train_losses = []
-#     # valid_losses = []
-#     early_stopping(train_loss, net, epoch)
-#     #
-#     # if early_stopping.early_stop:
-#     #     print("Early stopping")
-#     #     break
-#     # break
-
-for epoch in range(start_epoch, start_epoch+args.n_epochs):
+for epoch in range(start_epoch,start_epoch+args.n_epochs):
     train(epoch)
-    if not os.path.isdir('checkpoint'):
-        os.mkdir('checkpoint')
-    state = {
-        'net': net.state_dict(),
-        'epoch': epoch,
-    }
-    torch.save(state, os.path.join('./checkpoint', 'net_epoch{}.pt'.format(epoch)))
-    try:
-        test(epoch)
-        train_loss = np.average(train_losses)
-    # valid_loss = np.average(valid_losses)
-#     avg_train_losses.append(train_loss)
-    # avg_valid_losses.append(valid_loss)
-    # epoch_len = len(str(args.n_epochs))
-    # print_msg = (f'[{epoch:>{epoch_len}}/{args.n_epochs:>{epoch_len}}] ' +
-    #          f'train_loss: {train_loss:.5f} ' +
-    #          f'valid_loss: {valid_loss:.5f}')
-    # print(print_msg)
-        writer.add_scalar('train_loss_per_epoch', train_loss, epoch)
-    except Exception as e:
-        print(e)
-        continue
+    valid(epoch)
+    train_loss = np.average(train_losses)
+    valid_loss = np.average(valid_losses)
+    avg_train_losses.append(train_loss)
+    avg_valid_losses.append(valid_loss)
+    epoch_len = len(str(args.n_epochs))
+    print_msg = (f'[{epoch:>{epoch_len}}/{args.n_epochs:>{epoch_len}}] ' +
+             f'train_loss: {train_loss:.5f} ' +
+             f'valid_loss: {valid_loss:.5f}')
+    print(print_msg)
+    writer.add_scalar('train_loss_per_epoch',train_loss, epoch)
+    writer.add_scalar('val_loss_per_epoch',valid_loss, epoch)
+    early_stopping(valid_loss, net, epoch)
+    train_losses = []
+    valid_losses = []
+
+    if early_stopping.early_stop:
+        print("Early stopping")
+        break

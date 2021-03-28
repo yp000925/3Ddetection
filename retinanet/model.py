@@ -198,6 +198,10 @@ class ResNet(nn.Module):
 
         prior = 0.01
 
+        # initialize the weight and bias as said in paper，prevents the large number of background anchors
+        # from generating a large, destabilizing
+        # loss value in the first iteration of training.
+
         self.classificationModel.output.weight.data.fill_(0)
         self.classificationModel.output.bias.data.fill_(-math.log((1.0 - prior) / prior))
 
@@ -352,3 +356,10 @@ def resnet152(num_classes, pretrained=False, **kwargs):
     if pretrained:
         model.load_state_dict(model_zoo.load_url(model_urls['resnet152'], model_dir='.'), strict=False)
     return model
+
+
+if __name__ =='__main__':
+    model = resnet18(256)
+    inputs = torch.randn([1,3,1024,1024])
+    model.eval()
+    out = model(inputs)

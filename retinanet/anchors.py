@@ -29,6 +29,7 @@ class Anchors(nn.Module):
 
         for idx, p in enumerate(self.pyramid_levels):
             anchors         = generate_anchors(base_size=self.sizes[idx], ratios=self.ratios, scales=self.scales)
+            # anchors [9 x 4]
             shifted_anchors = shift(image_shapes[idx], self.strides[idx], anchors)
             all_anchors     = np.append(all_anchors, shifted_anchors, axis=0)
 
@@ -43,6 +44,8 @@ def generate_anchors(base_size=16, ratios=None, scales=None):
     """
     Generate anchor (reference) windows by enumerating aspect ratios X
     scales w.r.t. a reference window.
+
+    :return anchors [9 x 4]
     """
 
     if ratios is None:
@@ -122,7 +125,7 @@ def shift(shape, stride, anchors):
     # shift anchors (K, A, 4)
     # reshape to (K*A, 4) shifted anchors
     A = anchors.shape[0]
-    K = shifts.shape[0]
+    K = shifts.shape[0] # K = shape[0]*shape[1]
     all_anchors = (anchors.reshape((1, A, 4)) + shifts.reshape((1, K, 4)).transpose((1, 0, 2)))
     all_anchors = all_anchors.reshape((K * A, 4))
 

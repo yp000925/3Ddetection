@@ -17,7 +17,7 @@ from pycocotools.coco import COCO
 # import skimage.color
 # import skimage
 
-from PIL import Image,ImageDraw
+from PIL import Image, ImageDraw
 
 class CocoDataset(Dataset):
     """Coco dataset."""
@@ -285,7 +285,7 @@ class AspectRatioBasedSampler(Sampler):
 
 
 if __name__ == "__main__":
-    dataset_train = CocoDataset(root_dir='/Users/zhangyunping/PycharmProjects/3Ddetection/data', file_name='annotations_val.json',
+    dataset_train = CocoDataset(root_dir='/Users/zhangyunping/PycharmProjects/3Ddetection/data', file_name='annotations_eval.json',
                                 transform=transforms.Compose([Resizer()])
                                 )
     dataloader = torch.utils.data.DataLoader(dataset_train, batch_size=1, shuffle=False,

@@ -8,6 +8,7 @@ from torch.utils.data import DataLoader
 import os
 import torchvision.transforms as transforms
 
+
 def group_bbox(bbox,scores,labels,thred = 5):
     info = pd.DataFrame()
     info['x1'] = np.round(np.array(bbox)[:, 0])
@@ -60,6 +61,7 @@ def process_hist(group):
         s.append(score)
         classification.append(label)
     return np.asarray(s), np.asarray(classification),np.asarray(anchors)
+
 
 def evaluation_df(anchors_gt, anchors_p, classification_gt, classification_p, thred=0.7):
     '''

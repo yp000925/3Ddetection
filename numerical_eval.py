@@ -1,3 +1,9 @@
+'''
+evaluate the network and write each into the csv file
+then compare them to calculate the xy-error,z-error and the accuracy
+
+'''
+
 import os
 import argparse
 import torch

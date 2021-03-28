@@ -30,7 +30,7 @@ args = parser.parse_args()
 
 #prepare the data
 print('==> Preparing data..')
-dataset = CocoDataset(root_dir='./data', file_name='annotations_test.json',
+dataset = CocoDataset(root_dir='./data', file_name='annotations_eval.json',
                             transform=transforms.Compose([Resizer()])
                             )
 dataloader = DataLoader(dataset, batch_size=1, shuffle=False,

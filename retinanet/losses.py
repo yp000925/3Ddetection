@@ -101,7 +101,7 @@ class FocalLoss(nn.Module):
             assigned_annotations = bbox_annotation[IoU_argmax, :]
 
             targets[positive_indices, :] = 0
-            targets[positive_indices, assigned_annotations[positive_indices, 4].long()] = 1
+            targets[positive_indices, assigned_annotations[positive_indices, 4].long()] = 1 #one-hot embedding
 
             if torch.cuda.is_available():
                 alpha_factor = torch.ones(targets.shape).cuda() * alpha
@@ -128,7 +128,6 @@ class FocalLoss(nn.Module):
 
             if positive_indices.sum() > 0:
                 assigned_annotations = assigned_annotations[positive_indices, :]
-
                 anchor_widths_pi = anchor_widths[positive_indices]
                 anchor_heights_pi = anchor_heights[positive_indices]
                 anchor_ctr_x_pi = anchor_ctr_x[positive_indices]
